@@ -1,0 +1,41 @@
+---
+title: "data.table Ambassador Checklist"
+author: "Erin Franke & Sara Colando"
+date: "2024-12-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+To Do
+- Determine where we are presenting 
+  - USCOTs, Stat Bytes, Teach Stat? 
+  
+- Abstract for talk (1 page maximum)
+- Statement (1 page maximum): How does your proposed talk or presentation further the goals of the NSF-POSE Grant Program?  How will it enhance the data.table community and ecosystem?
+  - https://new.nsf.gov/funding/opportunities/pose-pathways-enable-open-source-ecosystems
+
+Personal Context (short answer)
+- Why are you personally interested in becoming a data.table Ambassador?  Please provide context for your experience with data.table: what you use it for, how long you have been using it, why you are qualified and enthusiastic about giving this talk.
+- If you would like to provide any links to your previous work or personal sites that provide context for your qualifications to be a data.table Ambassador (e.g. Github, social media, etc.) please do so below.
+  - This is not a required question; it is an optional space to provide the screening committee with further information.
+- Members of underrepresented or historically marginalized communities are particularly encouraged to apply.
+  - If you identify any such communities, and you would like to provide details to support your application, please do so here.
+  
+USCOTS Application (Deadline March 3, decisions by April 7)
+-https://www.causeweb.org/cause/uscots/uscots25/proposals/posters
+- Presentation Type
+  - Poster Only 
+  - Beyond only: A space for an activity or demonstration
+  - Poster & Beyond: Poster and space for an activity or demonstration
+- Description (250 words):
+  - Overall summary of the work
+  - Teaching environment (type of institution, type of students, number of students per class)
+  - key takeaways
+  - Helpful, but not necessary, to include citations to support their work (included in the additional information section) and provide evidence for efficacy in the classroom (course evals)
+- Take Aways (250 words): Briefly describe what you hope participants will take away from your poster or beyond submission. If appropriate, comment on how the topic connects to the theme of “Useful Models”
+- Link (optional): Please share a link to or upload the activity, demonstration, video, applet, etc. if available.
+
+
