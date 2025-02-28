@@ -1,2 +1,2 @@
 # data.table
-Repository for data.table ambassador application
+Materials for our CMU Statistics & Data Science Statbytes Presentation: *Computational Efficiency of R's data.table package*
