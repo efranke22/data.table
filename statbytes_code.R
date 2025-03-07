@@ -50,9 +50,65 @@ f <- data.frame(microbenchmark(
   mutate(nrow = 100)
 
 bind_rows(a, b, c, d, e, f) %>%
+  mutate(expr = ifelse(expr == "read_dplyr", "read_csv", "fread")) %>%
   ggplot(aes(x=nrow, y=avg_time, color = expr))+
   geom_point()+
   geom_line()+
   scale_x_log10(labels = scales::label_comma(), breaks = c(10, 100, 1000, 10000, 100000, 1000000))+
   theme_bw()+
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom")+
+  labs(x="Rows", y="Avg load time (seconds)", color = "")+
+  scale_color_manual(values = c("#CC79A7", "#0072B2"))
+
+# Reading in a 50 million row dataset ----------------------------------------
+set.seed(312)
+test = data.table(x=sample(1e4, 5e7, TRUE), y=sample(letters, 5e7, TRUE))
+test_df = as.data.frame(test)
+fwrite(test, "demo_data/test.csv") # efficient! 
+
+system.time(test <- fread("demo_data/test.csv")) # data.table
+system.time(test <- read_csv("demo_data/test.csv")) # readr
+system.time(test <- read.csv("demo_data/test.csv")) # base r
+
+
+# Automatic Indexing ------------------------------------
+
+set.seed(312)
+big_data = data.table(x=sample(1e4, 5e7, TRUE), y=sample(letters, 5e7, TRUE), z=sample(letters, 5e7, TRUE))
+
+t3 <- system.time(way3 <- big_data %>% filter(y == "E" & x== 312))
+t1 <- system.time(way1 <- big_data[y == "E" & x == 312])
+setkeyv(big_data, c("x", "y"))
+key(big_data)
+t2 <- system.time(way2 <- big_data[.(312, "E")])
+
+require(rbenchmark)
+benchmark(big_data %>% filter(x== 312 & y == "E"), big_data[.(312, "E")], 
+          replications = 50)
+
+
+
+
+summer <- fread("demo_data/divvy_summer2022.csv")
+key(summer)
+print(object.size(summer), units = "Mb")
+t1 <- system.time(way1 <- summer[start_lat == 41.75 & start_station_name == "Western Ave & 118th St"])
+
+setkeyv(summer, c("start_lat", "start_station_name"))
+key(summer)
+t2 <- system.time(way2 <- summer[.(41.75, "Western Ave & 118th St")])
+
+t3 <- system.time(way3 <- summer %>% filter(start_station_name == "Western Ave & 118th St" & start_lat == 41.75))
+
+dplyr_between <- function(df, left, right) {
+  df %>% filter(dplyr::between(x, left, right))
+}
+
+dt_autoidx <- function(dt, left, right) {
+  dt[x %in% left:right]
+}
+
+require(rbenchmark)
+benchmark(summer %>% filter(start_lat >= 41.75 & start_lat <= 41.85), 
+          summer[start_lat %in% 41.75:41.85])
+
