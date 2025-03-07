@@ -78,10 +78,17 @@ big_data = data.table(x=sample(1e4, 5e7, TRUE), y=sample(letters, 5e7, TRUE), z=
 
 t3 <- system.time(way3 <- big_data %>% filter(y == "E" & x== 312))
 t1 <- system.time(way1 <- big_data[y == "E" & x == 312])
-setkeyv(big_data, c("x", "y"))
-key(big_data)
+#setkeyv(big_data, c("x", "y"))
+#key(big_data)
+setindexv(big_data, c("x", "y"))
 t2 <- system.time(way2 <- big_data[.(312, "E")])
 
 require(rbenchmark)
 benchmark(big_data %>% filter(x== 312 & y == "E"), big_data[.(312, "E")], 
           replications = 50)
+
+setindexv(big_data, "x")
+key(big_data)
+indices(big_data)
+
+
