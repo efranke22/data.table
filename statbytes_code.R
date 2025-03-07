@@ -85,30 +85,3 @@ t2 <- system.time(way2 <- big_data[.(312, "E")])
 require(rbenchmark)
 benchmark(big_data %>% filter(x== 312 & y == "E"), big_data[.(312, "E")], 
           replications = 50)
-
-
-
-
-summer <- fread("demo_data/divvy_summer2022.csv")
-key(summer)
-print(object.size(summer), units = "Mb")
-t1 <- system.time(way1 <- summer[start_lat == 41.75 & start_station_name == "Western Ave & 118th St"])
-
-setkeyv(summer, c("start_lat", "start_station_name"))
-key(summer)
-t2 <- system.time(way2 <- summer[.(41.75, "Western Ave & 118th St")])
-
-t3 <- system.time(way3 <- summer %>% filter(start_station_name == "Western Ave & 118th St" & start_lat == 41.75))
-
-dplyr_between <- function(df, left, right) {
-  df %>% filter(dplyr::between(x, left, right))
-}
-
-dt_autoidx <- function(dt, left, right) {
-  dt[x %in% left:right]
-}
-
-require(rbenchmark)
-benchmark(summer %>% filter(start_lat >= 41.75 & start_lat <= 41.85), 
-          summer[start_lat %in% 41.75:41.85])
-
