@@ -19,20 +19,71 @@ house_prices <- data.table(house_prices)
 
 # %like% and %between% logical operators
 
-# let's say we want to subset to only houses with warranty deeds
-house_prices[Sale.Type %like% 'WD',]
+# let's say we want to subset to only houses with warranty deeds (WD in Sale.Type column)
+
+wd_houses <- house_prices[Sale.Type %like% 'WD',]
+
 # note that %like% is case sensitive 
 house_prices[Sale.Type %like% 'wd',]
 # if we want to ingore case, we would need to use tolower()
 house_prices[tolower(Sale.Type) %like% 'wd', ]
 
-
 # now, let's say we want to just look at houses with prices in the IQR 
+
 quantile(house_prices$SalePrice, c(0.25, .75))
 IQR_houses = house_prices[SalePrice %between% c(129500, 213500),]
 
-# rolling joins
+# there are a lot of columns in the house_prices data.table
+# to select columns in data.table we can do the following:
 
+house_prices[, .(Mo.Sold, Yr.Sold, SalePrice)]
+
+# grouping
+# we can use a similar syntax to above to count the number of houses sold each year
+
+house_prices[, .N, by = .(Mo.Sold, Yr.Sold)]
+
+# imagine now that we want 
+
+
+
+# rolling joins
+# maybe we are interested in avg neighborhood house price (we create fake data for this)
+# cross join to create grid of all combinations of neighborhoods, years, and months in data.table 
+neighborhood_dates = CJ(Neighborhood = unique(house_prices$Neighborhood),
+                        Yr.Sold = unique(house_prices$Yr.Sold),
+                        Mo.Sold = unique(house_prices$Mo.Sold))
+           
+# we create pseudo-average prices using the IQR we calculated earlier
+avg_house_prices = neighborhood_dates[, `:=` (
+  Date = as.IDate(paste(Yr.Sold, Mo.Sold, 1, sep = "-")),
+  Avg.Price = sample(seq(129500, 213500, by = 500), size = .N, replace = TRUE))]
+   
+
+avg_house_prices = avg_house_prices[, .(Neighborhood, Date, Avg.Price)]
+
+# Some data wrangling on the house_prices data.table...
+
+subset_house_prices = house_prices[, .(Mo.Sold, Yr.Sold, Neighborhood, SalePrice)]
+subset_house_prices[, SoldDate := as.IDate(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))] # just putting exact sale date as 15th of the month as example
+# notice we modified the house_prices data.table in place!
+subset_house_prices
+
+# next we select only the columns of interest...
+subset_house_prices = subset_house_prices[,.(Neighborhood, SalePrice, SoldDate)]
+
+# finally, we can create the rolling join!
+rolled_join = avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'), roll = TRUE]
+rolled_join
+
+# we can also keep og columns so it is clearer how the joining is happening...
+avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'),
+                 roll = TRUE,
+                 j = .(Neighborhood,
+                       Date,
+                       Avg.Date = x.Date,
+                       Avg.Price,
+                       SalePrice)]
 
 # grouped modeling
 
