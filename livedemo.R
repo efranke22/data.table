@@ -56,7 +56,7 @@ neighborhood_dates = CJ(Neighborhood = unique(house_prices$Neighborhood),
            
 # we create pseudo-average prices using the IQR we calculated earlier
 avg_house_prices = neighborhood_dates[, `:=` (
-  Date = as.IDate(paste(Yr.Sold, Mo.Sold, 1, sep = "-")),
+  Date = as.Date(paste(Yr.Sold, Mo.Sold, 1, sep = "-")),
   Avg.Price = sample(seq(129500, 213500, by = 500), size = .N, replace = TRUE))]
    
 
@@ -65,7 +65,7 @@ avg_house_prices = avg_house_prices[, .(Neighborhood, Date, Avg.Price)]
 # Some data wrangling on the house_prices data.table...
 
 subset_house_prices = house_prices[, .(Mo.Sold, Yr.Sold, Neighborhood, SalePrice)]
-subset_house_prices[, SoldDate := as.IDate(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))] # just putting exact sale date as 15th of the month as example
+subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))] # just putting exact sale date as 15th of the month as example
 # notice we modified the house_prices data.table in place!
 subset_house_prices
 
@@ -73,11 +73,10 @@ subset_house_prices
 subset_house_prices = subset_house_prices[,.(Neighborhood, SalePrice, SoldDate)]
 
 # finally, we can create the rolling join!
-rolled_join = avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'), roll = TRUE]
-rolled_join
+avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'), roll = TRUE]
 
 # we can also keep og columns so it is clearer how the joining is happening...
-avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'),
+rolling_join = avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'),
                  roll = TRUE,
                  j = .(Neighborhood,
                        Date,
@@ -85,16 +84,32 @@ avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'
                        Avg.Price,
                        SalePrice)]
 
+rolling_join
+
+# grouped visualization
+
+to_visualize = house_prices[Neighborhood %in% c('NAmes', 'OldTown', 'CollgCr'), ]
+
+to_visualize[,
+             print(
+               ggplot(.SD, aes(x = Yr.Sold, y = SalePrice,
+                               fill = as.factor(Yr.Sold),
+                               color = as.factor(Yr.Sold))) +
+                 geom_boxplot(alpha = 0.5) +
+                 theme_classic()+
+                 theme(legend.position = 'none')),
+             by = .(Neighborhood)]
+
 # grouped modeling
 
+grouped_models <- house_prices[, .(mods = list(
+  lm(SalePrice ~ Lot.Area + Bedroom.AbvGr + Full.Bath + Year.Built*Yr.Sold, data = .SD) #can put any type of model in here
+  )),
+  by = Neighborhood ]
 
+OldTown_lm_summary <- summary(grouped_models$mods[[15]])
+NridgHt_lm_summary <- summary(grouped_models$mods[[8]])
 
-
-# loading in the data
-system.time(summer <- fread("demo_data/divvy_summer2022.csv")) # data.table
-system.time(summer2 <- read_csv("demo_data/divvy_summer2022.csv")) # readr
-system.time(summer <- read.csv("demo_data/divvy_summer2022.csv")) # base r
-
-summer <- data.table(summer)
-
+OldTown_lm_summary
+NridgHt_lm_summary
 
