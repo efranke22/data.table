@@ -2,7 +2,6 @@
 library(data.table)
 library(dtplyr)
 library(tidyverse)
-library(tidytable)
 
 # live demo using House prices in Ames, Iowa data from the CMU S&DS Data Repository
 
@@ -97,7 +96,8 @@ to_visualize[,
                                color = as.factor(Yr.Sold))) +
                  geom_boxplot(alpha = 0.5) +
                  theme_classic()+
-                 theme(legend.position = 'none')),
+                 labs(title = paste(Neighborhood))+
+                 theme(legend.position = 'none', plot.title.position = "plot")),
              by = .(Neighborhood)]
 
 # grouped modeling
@@ -113,3 +113,43 @@ NridgHt_lm_summary <- summary(grouped_models$mods[[8]])
 OldTown_lm_summary
 NridgHt_lm_summary
 
+# dtplyr 
+# suppose we are interested in filtering for all houses built in 2001. 
+# we can use dtplyr to write this in dplyr syntax but run as data.table expressions
+house_prices2 <- lazy_dt(house_prices) # captures the intent of dplyr verbs, only actually performing computation when requested
+
+# to compare with microbenchmark, 
+dtplyr_way <- function() { # captures the intent of dplyr verbs, only actually performing computation when requested
+  house_prices2 %>%
+    dplyr::group_by(Neighborhood, Yr.Sold) %>% 
+    dplyr::count() %>%
+    as_tibble()
+}
+
+data_table_way <- function() {
+  house_prices[, (.value = .N), by = .(Neighborhood, Yr.Sold)]
+}
+
+
+dplyr_way <- function() {
+  house_prices %>%
+    group_by(Neighborhood, Yr.Sold) %>% 
+    count() 
+}
+
+microbenchmark(
+  dtplyr_way = dtplyr_way(),
+  data_table_way = data_table_way(),
+  dplyr_way = dplyr_way(),
+  times = 50L
+)
+
+# tidytable!
+library(tidytable)
+large_houses <- house_prices %>%
+  mutate(big_house = case_when(Full.Bath %in% c(3,4) & Gr.Liv.Area >= 2500 ~ 1, 
+                               TRUE ~ 0))
+
+house_prices %>%
+  summarize(avg_price = mean(SalePrice),
+            .by = c(Street, Neighborhood))
