@@ -19,52 +19,79 @@ house_prices <- data.table(house_prices)
 
 # %like% and %between% logical operators
 # let's say we want to subset to only houses with warranty deeds (WD in Sale.Type column)
-
 wd_houses <- house_prices[Sale.Type %like% 'WD',]
 
 # note that %like% is case sensitive 
 house_prices[Sale.Type %like% 'wd',]
-# if we want to ignore case, we would need to use tolower()
+# if we want to ignore case, we would need to use tolower() [from Base R]
 house_prices[tolower(Sale.Type) %like% 'wd', ]
 
-# now, let's say we want to just look at houses with prices in the IQR 
-
+# now, let's say we want to just look at houses with prices within the IQR 
 quantile(house_prices$SalePrice, c(0.25, .75))
 IQR_houses = house_prices[SalePrice %between% c(129500, 213500),]
 
 # there are a lot of columns in the house_prices data.table
 # to select columns in data.table we can do the following:
-
 house_prices[, .(Mo.Sold, Yr.Sold, SalePrice)]
 
 # grouping
-# we can use a similar syntax to above to count the number of houses sold each year
-
-house_prices[, .N, by = .(Mo.Sold, Yr.Sold)] #.N is a special symbols which generates the count for each group
+# we can count the number of houses sold each year using .N
+#.N is a special symbols which generates the count for each group
+house_prices[, .N, by = .(Mo.Sold, Yr.Sold)] 
 
 # there are multiple of these special symbols used for convenience
+# for instance, there is also .I, which returns the row indices for each group
 
-house_prices[, .I, by = .(Mo.Sold, Yr.Sold)] # .I returns the the row indices for each group
+house_prices[, .I, by = .(Mo.Sold, Yr.Sold)] 
 
-# we can also use .SD or .SDcols on group by variables to apply functions across multiple 
-# both of these work, but the first one might be quicker if we are trying to do lots of columns at once
+# two other special symbols are .SD and .SDcols
+# .SD gives us the data rows associated with each group
 house_prices[, .SD[, lapply(.(avg_SalePrice = SalePrice, avg_Lot.Area = Lot.Area), mean)], by = .(Mo.Sold, Yr.Sold)]
 house_prices[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)), by = .(Mo.Sold, Yr.Sold)]
 
-# notice too that we can use pipes if we want with data.table (base pipe or magrittr pipe)
+# one of the things that makes data.table so efficient is that it modifies by reference by default
+# modeled off of: https://tysonbarrett.com/jekyll/update/2019/07/12/datatable/
+# for more infromation, see: vignette("datatable-reference-semantics")
 
-house_prices %>%
-  .[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)),by = .(Mo.Sold, Yr.Sold)]
+subset_house_prices = house_prices[, .(Mo.Sold, Yr.Sold, Neighborhood, SalePrice)]
+tracemem(subset_house_prices)
+subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))]
+subset_house_prices
+tracemem(subset_house_prices)
 
-house_prices |>
-  _[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)),by = .(Mo.Sold, Yr.Sold)]
+# So, if we make a new pointer (in essence a new name that points to the same data),
+# then changes to one makes changes to the other.
+subset_house_prices2 = subset_house_prices
+subset_house_prices2
+tracemem(subset_house_prices2)
+subset_house_prices[,SoldDate := NULL] #removes SoldDate
+subset_house_prices2
 
-# we can mutate the data.table like we would in dplyr as follows...
+# notice we can even use case_when [which is a dplyr function that works on a vector] and pipes with data.table(!!)
+tracemem(subset_house_prices)
+subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))] %>% 
+  .[, SalePrice_quartile := case_when(SalePrice < 129500 ~ 1,
+                                      SalePrice < 160000 ~ 2,
+                                      SalePrice < 213500 ~ 3,
+                                      SalePrice < 755000 ~ 4,
+                            TRUE ~ NA)] %>% 
+  .[, Neighbhoorhood_lower := tolower(Neighborhood)]
 
-modified_subset_house_prices = copy(subset_house_prices)[, Date :=  as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))]
+# what is very cool about this, is that it also modifies by reference (even though we are using pipes AND a dplyr function)!
+subset_house_prices
+tracemem(subset_house_prices) #reference stays the same! No internal copies made of the object
+
+# As explained by Barrett, "this is hugely beneficial in large data sets, where RAM can get used up with all the copies"
+
+# compare to this:
+subset_house_prices3 <- subset_house_prices
+subset_house_prices3$row_number <- seq(1,2930, 1) # a copy was made
+
+"tracemem[0x10f9d5708 -> 0x116688808]: 
+tracemem[0x116688808 -> 0x116688878]: copy $<-.data.table $<- "
 
 subset_house_prices
-modified_subset_house_prices
+subset_house_prices3
 
 # rolling joins
 # maybe we are interested in avg neighborhood house price (we create fake data for this)
@@ -82,13 +109,10 @@ avg_house_prices = neighborhood_dates[, `:=` (
 avg_house_prices = avg_house_prices[, .(Neighborhood, Date, Avg.Price)]
 
 # Some data wrangling on the house_prices data.table...
-
+# first we select only the columns of interest...
 subset_house_prices = house_prices[, .(Mo.Sold, Yr.Sold, Neighborhood, SalePrice)]
-subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))] # just putting exact sale date as 15th of the month as example
-# notice we modified the house_prices data.table in place!
-subset_house_prices
-
-# next we select only the columns of interest...
+tracemem(subset_house_prices)
+subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))]
 subset_house_prices = subset_house_prices[,.(Neighborhood, SalePrice, SoldDate)]
 
 # finally, we can create the rolling join!
