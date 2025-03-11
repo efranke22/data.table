@@ -2,6 +2,7 @@ library(data.table)
 library(dtplyr)
 library(tidyverse)
 library(microbenchmark)
+library(tidytable)
 
 # LOAD data ----------------------------------------------------------------------------
 system.time(crime <- fread("demo_data/crimes.csv")) # data.table 14.2
