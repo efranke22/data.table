@@ -1,8 +1,10 @@
-# libraries 
+#### LIBRARIES ####
 library(data.table)
 library(dtplyr)
 library(tidyverse)
 library(microbenchmark)
+
+#### READING THE DATA AND LOGICAL OPERATORS ####
 
 # live demo using House prices in Ames, Iowa data from the CMU S&DS Data Repository
 
@@ -18,9 +20,9 @@ house_prices <- fread("demo_data/ames-housing.csv") # data.table
 wd_houses <- house_prices[Sale.Type %like% 'WD',]
 
 # note that %like% is case sensitive 
-house_prices[Sale.Type %like% 'wd',]
+#house_prices[Sale.Type %like% 'wd',]
 # if we want to ignore case, we would need to use tolower() [from Base R]
-house_prices[tolower(Sale.Type) %like% 'wd', ]
+#house_prices[tolower(Sale.Type) %like% 'wd', ]
 
 # now, let's say we want to just look at houses with prices within the IQR 
 quantile(house_prices$SalePrice, c(0.25, .75))
@@ -30,22 +32,20 @@ IQR_houses = house_prices[SalePrice %between% c(129500, 213500),]
 # to select columns in data.table we can do the following:
 house_prices[, .(Mo.Sold, Yr.Sold, SalePrice)]
 
-# grouping
+#### GROUPING ####
 # we can count the number of houses sold each year using .N
 #.N is a special symbols which generates the count for each group
 house_prices[, .N, by = .(Mo.Sold, Yr.Sold)] 
 
 # there are multiple of these special symbols used for convenience
-# for instance, there is also .I, which returns the row indices for each group
+# for instance, there are two other special symbols are .SD and .SDcols
+# .SD gives us the data rows associated with each group#
+# house_prices[, .SD[, lapply(.(avg_SalePrice = SalePrice, avg_Lot.Area = Lot.Area), mean)], by = .(Mo.Sold, Yr.Sold)]
+# house_prices[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)), by = .(Mo.Sold, Yr.Sold)]
 
-house_prices[, .I, by = .(Mo.Sold, Yr.Sold)] 
 
-# two other special symbols are .SD and .SDcols
-# .SD gives us the data rows associated with each group
-house_prices[, .SD[, lapply(.(avg_SalePrice = SalePrice, avg_Lot.Area = Lot.Area), mean)], by = .(Mo.Sold, Yr.Sold)]
-house_prices[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)), by = .(Mo.Sold, Yr.Sold)]
-
-# one of the things that makes data.table so efficient is that it modifies by reference by default
+#### MODIFY BY REFERENCE ####
+# one of the things that makes data.table so efficient is that it modifies by reference by default 
 # modeled off of: https://tysonbarrett.com/jekyll/update/2019/07/12/datatable/
 # for more infromation, see: vignette("datatable-reference-semantics")
 
@@ -89,7 +89,23 @@ tracemem[0x116688808 -> 0x116688878]: copy $<-.data.table $<- "
 subset_house_prices
 subset_house_prices3
 
-# rolling joins
+#### A NOTE OF INDICES ####
+# because we wanted to give a sense of the basic data.table syntax in this live demo,
+# we did not implement secondary indexes or keys at the start. the syntax differs a bit.
+# a cool new feature is automatic indexing! this is implemented for binary operators == and %in%. 
+# An index is automatically created and saved as an attribute.
+
+setindexv(house_prices, NULL)
+house_prices[Year.Built == 2001]
+indices(house_prices)
+house_prices[.(2001), on = "Year.Built"]
+# note: this is different than the type data.table syntax: 
+house_prices[Year.Built == 2001] # does not reap binary search benefits
+
+# for more examples regarding secondary indexes and automatic indexing, see
+# https://cran.r-project.org/web/packages/data.table/vignettes/datatable-secondary-indices-and-auto-indexing.html
+
+#### ROLLING JOINS ####
 # maybe we are interested in avg neighborhood house price (we create fake data for this)
 # cross join to create grid of all combinations of neighborhoods, years, and months in data.table 
 neighborhood_dates = CJ(Neighborhood = unique(house_prices$Neighborhood),
@@ -105,18 +121,13 @@ avg_house_prices = neighborhood_dates[, `:=` (
 avg_house_prices = avg_house_prices[, .(Neighborhood, Date, Avg.Price)]
 
 # Some data wrangling on the house_prices data.table...
-# first we select only the columns of interest...
 subset_house_prices = house_prices[, .(Mo.Sold, Yr.Sold, Neighborhood, SalePrice)]
-tracemem(subset_house_prices)
 subset_house_prices[, SoldDate := as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))]
 subset_house_prices = subset_house_prices[,.(Neighborhood, SalePrice, SoldDate)]
 
 # finally, we can create the rolling join!
-avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'), roll = TRUE]
-
-# we can also keep og columns so it is clearer how the joining is happening...
 rolling_join = avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Date' = 'SoldDate'),
-                 roll = TRUE,
+                 roll = Inf,
                  j = .(Neighborhood,
                        Date,
                        Avg.Date = x.Date,
@@ -125,7 +136,7 @@ rolling_join = avg_house_prices[subset_house_prices, on = c('Neighborhood', 'Dat
 
 rolling_join
 
-# grouped visualization
+#### GROUPED VISUALIZATION ####
 
 to_visualize = house_prices[Neighborhood %in% c('NAmes', 'OldTown', 'CollgCr'), ]
 
@@ -140,7 +151,7 @@ to_visualize[,
                  theme(legend.position = 'none', plot.title.position = "plot")),
              by = .(Neighborhood)]
 
-# grouped modeling
+#### GROUPED MODELING ####
 
 grouped_models <- house_prices[, .(mods = list(
   lm(SalePrice ~ Lot.Area + Bedroom.AbvGr + Full.Bath + Year.Built*Yr.Sold, data = .SD) #can put any type of model in here
@@ -153,7 +164,7 @@ NridgHt_lm_summary <- summary(grouped_models$mods[[8]])
 OldTown_lm_summary
 NridgHt_lm_summary
 
-# dtplyr 
+#### dtplyr ####
 # suppose we are interested in filtering for all houses built in 2001. CHANGE
 # we can use dtplyr to write this in dplyr syntax but run as data.table expressions
 
@@ -185,7 +196,7 @@ microbenchmark(
   times = 50L
 )
 
-# tidytable!
+#### tidytable ####
 library(tidytable)
 large_houses <- house_prices %>%
   mutate(big_house = case_when(Full.Bath %in% c(3,4) & Gr.Liv.Area >= 2500 ~ 1, 
@@ -194,19 +205,3 @@ large_houses <- house_prices %>%
 grouped_avg_price <- house_prices %>%
   summarize(avg_price = mean(SalePrice),
             .by = c(Street, Neighborhood))
-
-# a note on indexes
-# because we wanted to give a sense of the basic data.table syntax in this live demo,
-# we did not implement secondary indexes or keys at the start. the syntax differs a bit.
-# a cool new feature is automatic indexing! this is implemented for binary operators == and %in%. 
-# An index is automatically created and saved as an attribute.
-
-setindexv(house_prices, NULL)
-house_prices[Year.Built == 2001]
-indices(house_prices)
-house_prices[.(2001), on = "Year.Built"]
-# note: this is different than the type data.table syntax: 
-house_prices[Year.Built == 2001] # does not reap binary search benefits
-
-# for more examples regarding secondary indexes and automatic indexing, see
-# https://cran.r-project.org/web/packages/data.table/vignettes/datatable-secondary-indices-and-auto-indexing.html
