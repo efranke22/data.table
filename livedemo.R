@@ -2,6 +2,7 @@
 library(data.table)
 library(dtplyr)
 library(tidyverse)
+library(microbenchmark)
 
 # live demo using House prices in Ames, Iowa data from the CMU S&DS Data Repository
 
@@ -17,14 +18,13 @@ system.time(house_prices3 <- read.csv("demo_data/ames-housing.csv")) # base r
 house_prices <- data.table(house_prices)
 
 # %like% and %between% logical operators
-
 # let's say we want to subset to only houses with warranty deeds (WD in Sale.Type column)
 
 wd_houses <- house_prices[Sale.Type %like% 'WD',]
 
 # note that %like% is case sensitive 
 house_prices[Sale.Type %like% 'wd',]
-# if we want to ingore case, we would need to use tolower()
+# if we want to ignore case, we would need to use tolower()
 house_prices[tolower(Sale.Type) %like% 'wd', ]
 
 # now, let's say we want to just look at houses with prices in the IQR 
@@ -41,10 +41,6 @@ house_prices[, .(Mo.Sold, Yr.Sold, SalePrice)]
 # we can use a similar syntax to above to count the number of houses sold each year
 
 house_prices[, .N, by = .(Mo.Sold, Yr.Sold)]
-
-# imagine now that we want 
-
-
 
 # rolling joins
 # maybe we are interested in avg neighborhood house price (we create fake data for this)
@@ -116,6 +112,7 @@ NridgHt_lm_summary
 # dtplyr 
 # suppose we are interested in filtering for all houses built in 2001. 
 # we can use dtplyr to write this in dplyr syntax but run as data.table expressions
+
 house_prices2 <- lazy_dt(house_prices) # captures the intent of dplyr verbs, only actually performing computation when requested
 
 # to compare with microbenchmark, 
@@ -150,6 +147,21 @@ large_houses <- house_prices %>%
   mutate(big_house = case_when(Full.Bath %in% c(3,4) & Gr.Liv.Area >= 2500 ~ 1, 
                                TRUE ~ 0))
 
-house_prices %>%
+grouped_avg_price <- house_prices %>%
   summarize(avg_price = mean(SalePrice),
             .by = c(Street, Neighborhood))
+
+# a note on indexes
+# because we wanted to give a sense of the basic data.table syntax in this live demo,
+# we did not implement secondary indexes or keys at the start. the syntax differs a bit.
+# a cool new feature is automatic indexing! this is implemented for binary operators == and %in%. 
+# An index is automatically created and saved as an attribute.
+
+house_prices[Year.Built == 2001]
+indices(house_prices)
+house_prices[.(2001), on = "Year.Built"]
+# note: this is different than the type data.table syntax: 
+house_prices[Year.Built == 2001] # does not reap binary search benefits
+
+# for more examples regarding secondary indexes and automatic indexing, see
+# https://cran.r-project.org/web/packages/data.table/vignettes/datatable-secondary-indices-and-auto-indexing.html
