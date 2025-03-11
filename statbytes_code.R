@@ -1,7 +1,6 @@
 library(data.table)
 library(dtplyr)
 library(tidyverse)
-library(tidytable)
 library(microbenchmark)
 library(rbenchmark)
 
@@ -68,13 +67,15 @@ fread_v_read_csv <- bind_rows(a, b, c, d, e, f) %>%
 ggsave('speed_plots/fread_v_read_csv.png', bg = 'white', width = 4.5, height = 4, dpi = 1000)
 
 # Keys and Indices -------------------------------------------------------------------
+data.frame(microbenchmark(
+  dplyr_way = crime %>% dplyr::filter(Beat == 511), 
+  dt_way = crime[Beat == 511], times = 10L)) %>%
+  group_by(expr) %>% summarize(avg_time = mean(time)/1000000000) 
+
 setkeyv(crime, NULL)
 setkeyv(crime, "Beat")
 key(crime)
-data.frame(microbenchmark(
-  dplyr_way = crime %>% filter(Beat == 511), 
-  dt_way = crime[.(511)], times = 10L)) %>% 
-  group_by(expr) %>% summarize(avg_time = mean(time)/1000000000) 
+crime[.(511)]
 
 setindexv(crime, NULL)
 setindexv(crime, c("Year", "Primary Type"))

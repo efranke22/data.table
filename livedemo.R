@@ -11,11 +11,7 @@ library(microbenchmark)
 # https://doi.org/10.1080/10691898.2011.11889627
 
 # loading in the data
-system.time(house_prices <- fread("demo_data/ames-housing.csv")) # data.table
-system.time(house_prices2 <- read_csv("demo_data/ames-housing.csv")) # readr
-system.time(house_prices3 <- read.csv("demo_data/ames-housing.csv")) # base r
-
-house_prices <- data.table(house_prices)
+house_prices <- fread("demo_data/ames-housing.csv") # data.table
 
 # %like% and %between% logical operators
 # let's say we want to subset to only houses with warranty deeds (WD in Sale.Type column)
@@ -158,7 +154,7 @@ OldTown_lm_summary
 NridgHt_lm_summary
 
 # dtplyr 
-# suppose we are interested in filtering for all houses built in 2001. 
+# suppose we are interested in filtering for all houses built in 2001. CHANGE
 # we can use dtplyr to write this in dplyr syntax but run as data.table expressions
 
 house_prices2 <- lazy_dt(house_prices) # captures the intent of dplyr verbs, only actually performing computation when requested
@@ -205,6 +201,7 @@ grouped_avg_price <- house_prices %>%
 # a cool new feature is automatic indexing! this is implemented for binary operators == and %in%. 
 # An index is automatically created and saved as an attribute.
 
+setindexv(house_prices, NULL)
 house_prices[Year.Built == 2001]
 indices(house_prices)
 house_prices[.(2001), on = "Year.Built"]
