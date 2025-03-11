@@ -40,7 +40,31 @@ house_prices[, .(Mo.Sold, Yr.Sold, SalePrice)]
 # grouping
 # we can use a similar syntax to above to count the number of houses sold each year
 
-house_prices[, .N, by = .(Mo.Sold, Yr.Sold)]
+house_prices[, .N, by = .(Mo.Sold, Yr.Sold)] #.N is a special symbols which generates the count for each group
+
+# there are multiple of these special symbols used for convenience
+
+house_prices[, .I, by = .(Mo.Sold, Yr.Sold)] # .I returns the the row indices for each group
+
+# we can also use .SD or .SDcols on group by variables to apply functions across multiple 
+# both of these work, but the first one might be quicker if we are trying to do lots of columns at once
+house_prices[, .SD[, lapply(.(avg_SalePrice = SalePrice, avg_Lot.Area = Lot.Area), mean)], by = .(Mo.Sold, Yr.Sold)]
+house_prices[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)), by = .(Mo.Sold, Yr.Sold)]
+
+# notice too that we can use pipes if we want with data.table (base pipe or magrittr pipe)
+
+house_prices %>%
+  .[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)),by = .(Mo.Sold, Yr.Sold)]
+
+house_prices |>
+  _[, .(avg_SalePrice = mean(SalePrice), avg_Lot.Area = mean(Lot.Area)),by = .(Mo.Sold, Yr.Sold)]
+
+# we can mutate the data.table like we would in dplyr as follows...
+
+modified_subset_house_prices = copy(subset_house_prices)[, Date :=  as.Date(paste(Yr.Sold, Mo.Sold, 15, sep = "-"))]
+
+subset_house_prices
+modified_subset_house_prices
 
 # rolling joins
 # maybe we are interested in avg neighborhood house price (we create fake data for this)
