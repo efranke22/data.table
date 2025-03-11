@@ -25,7 +25,7 @@ wd_houses <- house_prices[Sale.Type %like% 'WD',]
 #house_prices[tolower(Sale.Type) %like% 'wd', ]
 
 # now, let's say we want to just look at houses with prices within the IQR 
-quantile(house_prices$SalePrice, c(0.25, .75))
+quantile(house_prices$SalePrice, c(0.25, 0.75))
 IQR_houses = house_prices[SalePrice %between% c(129500, 213500),]
 
 # there are a lot of columns in the house_prices data.table
