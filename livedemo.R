@@ -179,7 +179,7 @@ dtplyr_way <- function() { # captures the intent of dplyr verbs, only actually p
 }
 
 data_table_way <- function() {
-  house_prices[, (.value = .N), by = .(Neighborhood, Yr.Sold)]
+  house_prices[, .(value = .N), by = .(Neighborhood, Yr.Sold)]
 }
 
 
