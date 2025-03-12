@@ -1,5 +1,5 @@
 # data.table
-Materials for our CMU Statistics & Data Science Statbytes Presentation: *Computational Efficiency of R's data.table package*
+Materials for our CMU Statistics & Data Science StatBytes Presentation: *Computational Efficiency of R's data.table package*
 
 # Seal memes and data.table jokes :) 
 Why did the data.frame break up with the data.table? It wanted a faster relationship! \
